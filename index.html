@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Unfair Game: Periodic Table Edition</title>
+<style>
+:root{
+  color-scheme: dark;
+  --navy-0:#050a1f; --navy-1:#0a1230; --navy-2:#122052; --navy-3:#1b2f78;
+  --gold:#f5c542; --gold-d:#c9972a; --ink:#eef2ff; --mute:#9fb0e0;
+  --good:#37d67a; --bad:#ff5d6c;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+html,body{margin:0}
+body{
+  min-height:100vh;
+  background:radial-gradient(1200px 700px at 50% -10%, var(--navy-3) 0%, var(--navy-1) 55%, var(--navy-0) 100%) fixed;
+  color:var(--ink);
+  font-family:"Trebuchet MS","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+.title-font{font-family:Impact,"Arial Narrow Bold","Haettenschweiler",Haettenschweiler,sans-serif;letter-spacing:.04em}
+#app{max-width:1240px;margin:0 auto;padding:14px 14px 40px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:disabled{cursor:default}
+button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+/* buttons */
+.gold{background:linear-gradient(180deg,#ffd964,var(--gold-d));color:#1a1200;border:0;border-radius:10px;padding:10px 18px;font-weight:800;box-shadow:0 3px 0 #7a5a10,0 6px 14px rgba(0,0,0,.4)}
+.gold:active{transform:translateY(2px);box-shadow:0 1px 0 #7a5a10}
+.gold.big{font-size:1.25rem;padding:14px 34px}
+.ghost{background:transparent;border:2px solid var(--gold-d);border-radius:10px;padding:8px 14px;color:var(--gold);font-weight:700}
+.ghost:hover{background:rgba(245,197,66,.12)}
+.chip{width:46px;height:46px;border-radius:50%;border:2px solid var(--gold-d);background:var(--navy-2);font-weight:800;font-size:1.1rem}
+.chip.on{background:var(--gold);color:#1a1200}
+
+/* setup */
+.setup{max-width:640px;margin:6vh auto 0;text-align:center}
+.logo{font-size:clamp(2.6rem,9vw,5rem);line-height:.95;margin:0;color:var(--gold);text-shadow:0 4px 0 #6b4d0c,0 0 40px rgba(245,197,66,.35)}
+.edition{font-size:1.15rem;color:var(--mute);margin:10px 0 28px}
+.panel{background:rgba(18,32,82,.7);border:2px solid var(--gold-d);border-radius:16px;padding:20px}
+.countrow{display:flex;gap:10px;justify-content:center;margin:12px 0 18px;flex-wrap:wrap}
+.names{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:22px}
+.names input,.tn{background:var(--navy-0);border:2px solid var(--navy-3);color:var(--ink);border-radius:8px;padding:10px;font:inherit;width:100%}
+.hint{color:var(--mute);font-size:.9rem;margin-top:16px}
+
+/* top bar */
+.topbar{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:10px}
+.mini-logo{font-size:1.7rem;color:var(--gold);margin:0}
+.banner{flex:1;min-width:220px;text-align:center;padding:8px 14px;border-radius:10px;font-weight:800;border:2px dashed var(--navy-3);color:var(--mute)}
+.banner.live{border:2px solid var(--gold);background:rgba(245,197,66,.14);color:var(--gold)}
+
+/* scoreboard */
+.score{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:12px}
+.team{background:rgba(18,32,82,.75);border:2px solid var(--navy-3);border-radius:12px;padding:8px 10px;position:relative}
+.team.turn{border-color:var(--gold);box-shadow:0 0 0 2px rgba(245,197,66,.35),0 0 22px rgba(245,197,66,.35)}
+.team .tn{padding:4px 6px;font-weight:700;border:1px solid transparent;background:transparent}
+.team .tn:focus{border-color:var(--gold);background:var(--navy-0)}
+.team .pts{font-size:2rem;font-weight:900;text-align:center;line-height:1.1}
+.team .up{position:absolute;top:-10px;right:8px;background:var(--gold);color:#1a1200;font-size:.7rem;font-weight:900;padding:2px 8px;border-radius:99px}
+
+/* board */
+.boardwrap{overflow-x:auto;padding-bottom:6px}
+.board{display:grid;grid-template-columns:repeat(var(--n),minmax(118px,1fr));gap:6px;min-width:720px}
+.cat{background:linear-gradient(180deg,var(--navy-3),var(--navy-2));border:2px solid var(--gold-d);border-radius:10px;padding:10px 8px;text-align:center;font-weight:900;font-size:1rem;line-height:1.15;min-height:78px;display:flex;flex-direction:column;justify-content:center;gap:4px}
+.cat small{font-weight:600;color:var(--mute);font-size:.72rem}
+.slot{background:linear-gradient(180deg,#1d3a9c,#142a78);border:2px solid #2c4bb8;border-radius:10px;min-height:84px;font-size:2.4rem;font-weight:900;color:var(--gold);text-shadow:0 2px 0 rgba(0,0,0,.5);transition:transform .12s, border-color .12s}
+.slot:hover:not(:disabled){transform:translateY(-2px);border-color:var(--gold)}
+.slot:disabled{background:rgba(10,18,48,.6);border-color:var(--navy-3);color:#35457f;text-shadow:none}
+
+/* modal */
+.modal,.overlay{position:fixed;inset:0;display:none;z-index:50;overflow-y:auto;background:rgba(3,6,20,.86);padding:calc(14px + env(safe-area-inset-top,0px)) 14px calc(14px + env(safe-area-inset-bottom,0px))}
+.overlay{z-index:80;background:rgba(3,6,20,.94)}
+.modal.on,.overlay.on{display:block}
+.card{max-width:800px;margin:0 auto;background:linear-gradient(180deg,var(--navy-2),var(--navy-1));border:3px solid var(--gold);border-radius:18px;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.qhead{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center;color:var(--mute);font-weight:700}
+.qhead .who{background:var(--gold);color:#1a1200;border-radius:99px;padding:3px 12px;font-weight:900}
+.qhead .who.steal{background:var(--bad);color:#fff}
+.calcnote{margin-top:8px;color:var(--gold);font-weight:700;font-size:.9rem}
+.qtext{font-size:clamp(1.25rem,3.4vw,1.7rem);font-weight:700;line-height:1.3;margin:14px 0}
+.timerbox{margin:10px 0 14px;text-align:center;padding:10px;border-radius:12px;background:var(--navy-0);border:2px solid var(--navy-3)}
+.timerbox .tl{color:var(--mute);font-weight:700}
+.timerbox .tnum{font-size:3rem;font-weight:900;color:var(--gold);line-height:1}
+.timerbox .bar{height:8px;border-radius:8px;background:var(--navy-3);margin-top:8px;overflow:hidden}
+.timerbox .bar i{display:block;height:100%;width:100%;background:var(--gold)}
+.timerbox.read .tnum{color:#8fd0ff}
+.timerbox.read .bar{display:none}
+.timerbox.grace{border-color:var(--bad);animation:pulse .5s infinite alternate}
+.timerbox.grace .tnum,.timerbox.grace .tl{color:var(--bad)}
+.timerbox.grace .bar i{background:var(--bad)}
+@keyframes pulse{from{box-shadow:0 0 0 0 rgba(255,93,108,.0)}to{box-shadow:0 0 22px 4px rgba(255,93,108,.55)}}
+.choices{display:grid;gap:10px}
+.choice{display:flex;gap:12px;align-items:center;text-align:left;background:var(--navy-0);border:2px solid var(--navy-3);border-radius:12px;padding:12px 14px;font-size:1.08rem}
+.choice b{flex:none;width:34px;height:34px;border-radius:50%;background:var(--navy-3);display:grid;place-items:center;color:var(--gold)}
+.choice:hover:not(:disabled){border-color:var(--gold);background:#0d1a4a}
+.choice:disabled{color:var(--ink)}
+.choice.elim{opacity:.4;text-decoration:line-through;border-color:var(--bad)}
+.choice.correct{border-color:var(--good);background:rgba(55,214,122,.16)}
+.choice.correct b{background:var(--good);color:#04200f}
+.actions{margin-top:16px;padding:14px;border-radius:12px;background:rgba(5,10,31,.7);border:2px solid var(--navy-3);text-align:center}
+.actions .msg{font-size:1.15rem;font-weight:800;margin-bottom:12px}
+.actions .row{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+.actions .row button{min-width:150px}
+.reveal{font-size:clamp(3rem,14vw,6rem);font-weight:900;line-height:1;margin:6px 0;animation:pop .45s cubic-bezier(.2,1.6,.4,1)}
+.reveal.pos{color:var(--good)} .reveal.neg{color:var(--bad)}
+@keyframes pop{from{transform:scale(.2);opacity:0}to{transform:scale(1);opacity:1}}
+
+/* overlays */
+.big{max-width:760px;margin:6vh auto 0;text-align:center}
+.big h2{font-size:clamp(2.6rem,10vw,5.5rem);line-height:1;margin:0 0 10px;color:var(--gold);text-shadow:0 4px 0 #6b4d0c,0 0 40px rgba(245,197,66,.4);animation:pop .6s cubic-bezier(.2,1.6,.4,1)}
+.big .rule{font-size:clamp(1.6rem,6vw,3rem);font-weight:900;margin:14px 0}
+.big p{color:var(--mute);font-size:1.15rem;margin:8px 0 22px}
+.standings{max-width:460px;margin:18px auto;text-align:left}
+.standings div{display:flex;justify-content:space-between;padding:8px 14px;border-radius:8px;background:rgba(18,32,82,.75);margin-bottom:6px;font-weight:700}
+.standings div.w{background:var(--gold);color:#1a1200}
+.note{color:var(--gold);font-weight:700}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="modal" class="modal"></div>
+<div id="overlay" class="overlay"></div>
+
+<script>
+/* ============================================================
+   CONTENT: 6 categories x 12 questions (3 per difficulty tier)
+   First answer listed is the correct one; choices are shuffled at game start.
+   ============================================================ */
+const Q = (t, q, ...c) => ({ t, q, c });
+
+const CATS = [
+  { name: "Mendeleev It or Not", topic: "History", qs: [
+    Q(1,"Who is credited with publishing the first widely accepted periodic table in 1869?","Dmitri Mendeleev","Antoine Lavoisier","John Dalton","Marie Curie"),
+    Q(1,"Mendeleev's original table arranged the elements mainly by increasing what?","Atomic mass","Atomic number","Number of neutrons","Density"),
+    Q(1,"Mendeleev left gaps in his table. What was he predicting with those gaps?","Elements that had not been discovered yet","Elements that could never exist","Mistakes in the data that he planned to erase","Places for the noble gases"),
+    Q(2,"Which scientist used X-ray data to show that elements should be ordered by atomic number instead of atomic mass?","Henry Moseley","Dmitri Mendeleev","Ernest Rutherford","Niels Bohr"),
+    Q(2,"Mendeleev predicted an element he called eka-aluminium. Which real element turned out to match it?","Gallium","Germanium","Scandium","Indium"),
+    Q(2,"In the early 1800s, Döbereiner found groups of three similar elements where the middle element's atomic mass was about the average of the other two. What are these groups called?","Triads","Octaves","Isotopes","Periods"),
+    Q(3,"Newlands' Law of Octaves noticed that properties seemed to repeat after how many elements, when ordered by mass?","Every eighth element","Every fourth element","Every tenth element","Every twelfth element"),
+    Q(3,"When ordered strictly by atomic mass, tellurium and iodine land in the wrong columns chemically. What fixes this?","Ordering by atomic number instead","Ordering by density instead","Ordering alphabetically by name","Ordering by year of discovery"),
+    Q(3,"Lothar Meyer built a table around the same time as Mendeleev. Which property did he plot against atomic mass to reveal periodic patterns?","Atomic volume","Boiling point","Color","Electrical resistance"),
+    Q(4,"Which pair of scientists discovered argon in 1894, opening the door to the noble gas family?","Lord Rayleigh and William Ramsay","Robert Bunsen and Gustav Kirchhoff","Pierre and Marie Curie","Ernest Rutherford and Frederick Soddy"),
+    Q(4,"Glenn Seaborg proposed a major layout change in the 1940s. What was it?","Placing the actinides in their own row below the main table","Moving hydrogen to Group 18","Ordering elements by electronegativity","Adding a brand new column for the noble gases"),
+    Q(4,"When Mendeleev's mass order clashed with an element's chemical behavior, what did he do?","Placed it by its chemical properties, even if the mass order broke","Always followed mass order and ignored the behavior","Removed the element from the table","Created a separate table for it")
+  ]},
+  { name: "Lights, Columns, Action!", topic: "Arrangement", qs: [
+    Q(1,"What are the horizontal rows of the periodic table called?","Periods","Groups","Blocks","Series"),
+    Q(1,"What are the vertical columns of the periodic table called?","Groups (or families)","Periods","Orbits","Shells"),
+    Q(1,"The modern periodic table is arranged by increasing what?","Atomic number","Atomic mass","Number of neutrons","Density"),
+    Q(2,"How many groups are there on the standard periodic table?","18","8","7","32"),
+    Q(2,"Main-group elements in the same group share the same number of what?","Valence electrons","Energy levels","Neutrons","Protons"),
+    Q(2,"The elements that touch the stair-step line between metals and nonmetals are mostly called what?","Metalloids","Alkali metals","Halogens","Lanthanides"),
+    Q(3,"Which block of the periodic table contains the transition metals?","d-block","s-block","p-block","f-block"),
+    Q(3,"Which element sits in the same period as sodium and the same group as oxygen?","Sulfur","Selenium","Magnesium","Chlorine"),
+    Q(3,"What does an element's period number tell you about its atoms?","The number of occupied energy levels","The number of valence electrons","The number of neutrons","The atomic mass"),
+    Q(4,"Why are the lanthanides and actinides usually drawn in two rows below the main table?","Putting them inline would make the table far too wide","They are not real elements","They are all radioactive gases","They do not have atomic numbers"),
+    Q(4,"How many elements are in the fourth period?","18","8","32","2"),
+    Q(4,"A main-group element is in the fifth period and has seven valence electrons. Which element is it?","Iodine","Bromine","Chlorine","Tellurium")
+  ]},
+  { name: "Keeping Up with the Alkalis", topic: "Families", qs: [
+    Q(1,"What is the common name for the Group 1 metals (not counting hydrogen)?","Alkali metals","Alkaline earth metals","Halogens","Transition metals"),
+    Q(1,"What is the common name for the Group 17 elements?","Halogens","Noble gases","Alkali metals","Chalcogens"),
+    Q(1,"What is the common name for the Group 18 elements?","Noble gases","Halogens","Alkaline earth metals","Metalloids"),
+    Q(2,"Why are the noble gases so unreactive?","They have full valence shells","They have only one valence electron","They are too heavy to react","They are all radioactive"),
+    Q(2,"What ion charge do the alkaline earth metals typically form?","2+","1+","1\u2212","2\u2212"),
+    Q(2,"Which halogen is a liquid at room temperature?","Bromine","Chlorine","Iodine","Fluorine"),
+    Q(3,"Why are alkali metals typically stored under oil?","To keep them from reacting with air and moisture","To keep them from melting","To keep them from glowing","To make them easier to cut"),
+    Q(3,"Why do halogens tend to form ions with a 1\u2212 charge?","They are one electron short of a full valence shell","They have one extra electron to lose","They have no valence electrons","They are always bonded to metals"),
+    Q(3,"Which property is typical of transition metals?","Many can form ions with more than one charge","They are brittle, dull nonmetals","They never form compounds","They have full valence shells like noble gases"),
+    Q(4,"Hydrogen is often drawn above Group 1 even though it is not an alkali metal. Why does it get placed there?","It has one valence electron, like the alkali metals","It is a shiny, soft metal","It reacts violently with water","It is about the same size as lithium"),
+    Q(4,"Which pair of elements are both liquids at room temperature?","Bromine and mercury","Chlorine and mercury","Bromine and iodine","Mercury and sodium"),
+    Q(4,"Reactivity increases down the alkali metals but decreases down the halogens. What explains this?","Alkali metals lose their outer electron more easily as it gets farther away, while halogens attract an extra electron less strongly as they grow","Alkali metals gain electrons more easily, while halogens lose them more easily as they grow","Both families get more reactive as the nucleus gets bigger","Alkali metals get lighter going down, while halogens get heavier")
+  ]},
+  { name: "Radius Intentions", topic: "Atomic Radius", qs: [
+    Q(1,"Atomic radius is a measure of what?","The size of an atom","The charge of an atom","The mass of an atom","The energy of an atom"),
+    Q(1,"As you move down a group, what happens to atomic radius?","It increases","It decreases","It stays the same","It alternates"),
+    Q(1,"Which of these elements has the largest atomic radius?","Rubidium","Lithium","Sodium","Potassium"),
+    Q(2,"As you move left to right across a period, what generally happens to atomic radius?","It decreases","It increases","It stays the same","It doubles"),
+    Q(2,"Which has the larger atomic radius, sodium or chlorine?","Sodium","Chlorine","They are the same size","It can't be determined"),
+    Q(2,"Why does atomic radius increase going down a group?","Each element has an additional occupied energy level","Each element has fewer protons","Each element loses valence electrons","Each element has fewer neutrons"),
+    Q(3,"Why does atomic radius generally decrease across a period?","Nuclear charge increases while shielding stays about the same, pulling electrons in","Electrons are removed as you move right","The number of energy levels decreases","Neutrons squeeze the electron cloud"),
+    Q(3,"How does a cation's radius compare with its neutral atom?","Smaller","Larger","The same","It can't be compared"),
+    Q(3,"How does an anion's radius compare with its neutral atom?","Larger","Smaller","The same","It depends only on the neutrons"),
+    Q(4,"Which list shows these atoms in order of increasing atomic radius: Mg, Al, Na?","Al, Mg, Na","Na, Mg, Al","Mg, Al, Na","Na, Al, Mg"),
+    Q(4,"The ions S\u00B2\u207B, Cl\u207B, K\u207A, and Ca\u00B2\u207A all have the same electron configuration. Which is the largest?","S\u00B2\u207B","Cl\u207B","K\u207A","Ca\u00B2\u207A"),
+    Q(4,"Going down a group, atoms gain protons, yet their radius still increases. Which factor wins out?","Added energy levels and shielding outweigh the extra nuclear charge","Extra protons push the electrons farther away","Neutrons add repulsion","Electrons gain mass")
+  ]},
+  { name: "Electro-Negative Nancy", topic: "Electronegativity", qs: [
+    Q(1,"Electronegativity measures an atom's ability to do what in a chemical bond?","Attract shared electrons","Lose all of its electrons","Release protons","Emit light"),
+    Q(1,"Which element is the most electronegative?","Fluorine","Oxygen","Cesium","Chlorine"),
+    Q(1,"What generally happens to electronegativity left to right across a period?","It increases","It decreases","It stays the same","It drops to zero"),
+    Q(2,"What generally happens to electronegativity going down a group?","It decreases","It increases","It stays the same","It doubles"),
+    Q(2,"Which is more electronegative, oxygen or nitrogen?","Oxygen","Nitrogen","They are equal","Neither has a value"),
+    Q(2,"Why are noble gases usually left out of electronegativity trends?","They rarely form bonds","They have no electrons","They are all liquids","They are too large to measure"),
+    Q(3,"Which of these elements has the lowest electronegativity?","Cesium","Lithium","Chlorine","Bromine"),
+    Q(3,"A bond between atoms with a very large electronegativity difference is most likely what type?","Ionic","Nonpolar covalent","Polar covalent","Hydrogen bond"),
+    Q(3,"In a bond between hydrogen and chlorine, which atom carries the partial negative charge?","Chlorine","Hydrogen","Neither","Both equally"),
+    Q(4,"Which list shows these elements in order of increasing electronegativity: Mg, Cl, Na?","Na, Mg, Cl","Cl, Mg, Na","Mg, Na, Cl","Na, Cl, Mg"),
+    Q(4,"Why does electronegativity decrease going down a group?","Bonding electrons are farther from the nucleus and more shielded","The nucleus loses protons","Atoms lose electrons","Atoms get smaller"),
+    Q(4,"Which of these bonds is the most polar?","H\u2013F","H\u2013O","H\u2013N","H\u2013C")
+  ]},
+  { name: "Ion the Prize", topic: "Ionization Energy", qs: [
+    Q(1,"What does ionization energy measure?","The energy needed to remove an electron from an atom","The energy released when an atom gains an electron","The energy needed to split a nucleus","The energy of a photon"),
+    Q(1,"What generally happens to first ionization energy across a period?","It increases","It decreases","It stays the same","It disappears"),
+    Q(1,"What generally happens to first ionization energy down a group?","It decreases","It increases","It stays the same","It doubles"),
+    Q(2,"Which element has the highest first ionization energy?","Helium","Neon","Fluorine","Francium"),
+    Q(2,"Why do alkali metals have low first ionization energies?","They have a single, easily removed valence electron","They have full valence shells","They have huge nuclear charges","They have no valence electrons"),
+    Q(2,"For the same atom, which removal requires more energy?","The second electron","The first electron","They are equal","Neither requires energy"),
+    Q(3,"Why does first ionization energy decrease down a group?","Valence electrons are farther from the nucleus and better shielded","Nuclear charge decreases down the group","Atoms gain more protons than electrons","The number of valence electrons increases"),
+    Q(3,"Which has the higher first ionization energy, sodium or magnesium?","Magnesium","Sodium","They are equal","It depends on temperature"),
+    Q(3,"Which of these elements has the lowest first ionization energy?","Cesium","Lithium","Sodium","Potassium"),
+    Q(4,"Nitrogen has a higher first ionization energy than oxygen, even though oxygen is further right. Why?","Paired electrons in oxygen's p orbital repel each other, making one easier to remove","Oxygen has fewer protons than nitrogen","Nitrogen has a larger atomic radius","Oxygen has a full valence shell"),
+    Q(4,"Boron's first ionization energy is lower than beryllium's despite boron having more protons. Why?","Boron's outer electron sits in a higher-energy p sublevel and is shielded by the s electrons","Boron has a larger nuclear charge","Boron has more neutrons","Beryllium has fewer energy levels"),
+    Q(4,"Which atom would show the largest jump between its first and second ionization energies?","Sodium","Magnesium","Aluminum","Silicon")
+  ]}
+];
+
+/* ============================================================
+   RULES / CONSTANTS
+   ============================================================ */
+const RANGES = { 1:[3,5], 2:[5,8], 3:[8,10], 4:[10,12] };
+const READ_SECS = 5, NORMAL_SECS = 20, CALC_SECS = 60, STEAL_SECS = 10, GRACE_MS = 2000;
+const WIN_TEXT = { highest:"HIGHEST score wins", lowest:"LOWEST score wins", closest:"CLOSEST TO ZERO wins" };
+const WIN_FLAVOR = {
+  highest:"Hoard those points!",
+  lowest:"Start giving those points away!",
+  closest:"Balance is everything. Don't go too high or too low."
+};
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const rnd = (a,b) => a + Math.floor(Math.random()*(b-a+1));
+function shuffle(arr){ const a = arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+const fmt = v => (v>0 ? '+' : '\u2212') + Math.abs(v);
+function isCalc(text){ const m = text.match(/\b\d+(?:\.\d+)?\b/g) || []; return new Set(m).size >= 2; }
+
+let names = ['Team 1','Team 2','Team 3','Team 4','Team 5','Team 6','Team 7'];
+let teamCount = 4;
+let G = null;      // game state
+let Qs = null;     // current question state
+let endConfirmAt = 0;
+
+/* ============================================================
+   SETUP SCREEN
+   ============================================================ */
+function renderSetup(){
+  G = null; Qs = null;
+  $('#modal').classList.remove('on'); $('#modal').innerHTML='';
+  $('#overlay').classList.remove('on'); $('#overlay').innerHTML='';
+  $('#app').innerHTML = `
+    <div class="setup">
+      <h1 class="logo title-font">THE UNFAIR GAME</h1>
+      <div class="edition">Periodic Table Edition</div>
+      <div class="panel">
+        <div style="font-weight:800">How many teams?</div>
+        <div class="countrow">${[2,3,4,5,6,7].map(n=>`<button class="chip ${n===teamCount?'on':''}" data-act="count" data-v="${n}">${n}</button>`).join('')}</div>
+        <div class="names">${names.slice(0,teamCount).map((n,i)=>`<input data-i="${i}" maxlength="20" value="${esc(n)}" aria-label="Team ${i+1} name">`).join('')}</div>
+        <button class="gold big" data-act="start">Start Game</button>
+      </div>
+      <div class="hint">Points are hidden. The winning rule is hidden too. Good luck.</div>
+    </div>`;
+}
+
+/* ============================================================
+   GAME START
+   ============================================================ */
+function startGame(){
+  const n = teamCount;
+  const total = CATS.length * 4;
+  const frac = 0.35 + Math.random()*0.30;
+  G = {
+    teams: names.slice(0,n).map(nm => ({ name: (nm||'').trim() || 'Team', score: 0 })),
+    turn: rnd(0, n-1),
+    board: CATS.map(cat => [1,2,3,4].map(tier => {
+      const pool = cat.qs.filter(q => q.t === tier);
+      const pick = pool[rnd(0, pool.length-1)];
+      const choices = shuffle(pick.c.map((text,i) => ({ text, ok: i===0 })));
+      const [lo,hi] = RANGES[tier];
+      const mag = rnd(lo,hi);
+      const value = (Math.random()<0.5 ? -1 : 1) * mag;
+      return { q: pick.q, choices, value, calc: isCalc(pick.q), answered:false };
+    })),
+    win: ['highest','lowest','closest'][rnd(0,2)],
+    total,
+    twistAt: Math.max(1, Math.round(total*frac)),
+    twistFired: false,
+    answered: 0,
+    over: false
+  };
+  renderGame();
+}
+
+/* ============================================================
+   GAME SCREEN
+   ============================================================ */
+function renderGame(){
+  const banner = G.twistFired
+    ? `<div class="banner live">\uD83C\uDFC6 Win condition: ${WIN_TEXT[G.win]}</div>`
+    : `<div class="banner">Win condition: ??? (classified)</div>`;
+  let html = `
+    <div class="topbar">
+      <h1 class="mini-logo title-font">THE UNFAIR GAME</h1>
+      ${banner}
+      <button class="ghost" id="endbtn" data-act="endEarly" ${Qs||G.over?'disabled':''}>End Game Early &amp; Reveal Winner</button>
+    </div>
+    <div class="score">${G.teams.map((t,i)=>`
+      <div class="team ${i===G.turn?'turn':''}">
+        ${i===G.turn?'<span class="up">UP NEXT</span>':''}
+        <input class="tn" data-ti="${i}" maxlength="20" value="${esc(t.name)}" aria-label="Team ${i+1} name">
+        <div class="pts">${t.score}</div>
+      </div>`).join('')}</div>
+    <div class="boardwrap"><div class="board" style="--n:${CATS.length}">
+      ${CATS.map(c=>`<div class="cat">${esc(c.name)}<small>${esc(c.topic)}</small></div>`).join('')}
+      ${[0,1,2,3].map(si => CATS.map((c,ci)=>{
+        const cell = G.board[ci][si];
+        return `<button class="slot" data-act="slot" data-v="${ci},${si}" ${cell.answered?'disabled':''} aria-label="${esc(c.name)} question ${si+1}">${cell.answered?'\u2014':si+1}</button>`;
+      }).join('')).join('')}
+    </div></div>`;
+  $('#app').innerHTML = html;
+}
+
+/* ============================================================
+   QUESTION FLOW
+   ============================================================ */
+function openQ(ci, si){
+  if (!G || G.over || Qs) return;
+  const cell = G.board[ci][si];
+  if (cell.answered) return;
+  Qs = {
+    ci, si, cell,
+    team: G.turn, current: G.turn,
+    attempted: [], elim: [],
+    phase: 'read', deadline: Date.now() + READ_SECS*1000, total: READ_SECS,
+    isSteal: false, nextTeam: null, solver: null, award: null, reason: '', lastMiss: null
+  };
+  document.getElementById('endbtn') && (document.getElementById('endbtn').disabled = true);
+  renderQ();
+}
+
+function startLive(){
+  Qs.phase = 'live';
+  Qs.current = Qs.team;
+  Qs.isSteal = false;
+  Qs.total = Qs.cell.calc ? CALC_SECS : NORMAL_SECS;
+  Qs.deadline = Date.now() + Qs.total*1000;
+  renderQ();
+}
+
+function nextSteal(){
+  const n = G.teams.length;
+  for (let k=1;k<=n;k++){
+    const idx = (Qs.current + k) % n;
+    if (!Qs.attempted.includes(idx)) return idx;
+  }
+  return null;
+}
+
+function afterMiss(){
+  const nxt = nextSteal();
+  if (nxt === null){ Qs.phase = 'noone'; Qs.reason = 'Every team had a shot and nobody got it.'; }
+  else { Qs.nextTeam = nxt; Qs.phase = 'wrong'; }
+}
+
+function pick(i){
+  if (!Qs || !(Qs.phase==='live' || Qs.phase==='grace') || Qs.elim.includes(i)) return;
+  Qs.attempted.push(Qs.current);
+  if (Qs.cell.choices[i].ok){ Qs.solver = Qs.current; Qs.phase = 'recipient'; }
+  else { Qs.elim.push(i); Qs.lastMiss = { team: Qs.current, timeout:false }; afterMiss(); }
+  renderQ();
+}
+
+function timeoutMiss(){
+  Qs.attempted.push(Qs.current);
+  Qs.lastMiss = { team: Qs.current, timeout:true };
+  afterMiss();
+  renderQ();
+}
+
+function startSteal(){
+  Qs.current = Qs.nextTeam;
+  Qs.isSteal = true;
+  Qs.total = STEAL_SECS;
+  Qs.deadline = Date.now() + STEAL_SECS*1000;
+  Qs.phase = 'live';
+  renderQ();
+}
+
+function stopNoOne(){
+  Qs.phase = 'noone';
+  Qs.reason = 'The host called it. Nobody got it.';
+  renderQ();
+}
+
+function award(teamIdx, random){
+  const v = Qs.cell.value;
+  G.teams[teamIdx].score += v;
+  Qs.award = { team: teamIdx, val: v, random };
+  Qs.phase = 'result';
+  renderGame();
+  renderQ();
+}
+
+function finalizeQ(){
+  const finishedTeam = Qs.team;
+  Qs.cell.answered = true;
+  G.answered++;
+  G.turn = (finishedTeam + 1) % G.teams.length;
+  Qs = null;
+  renderQ();
+  renderGame();
+  const done = G.answered >= G.total;
+  if (!G.twistFired && G.answered >= G.twistAt){
+    G.twistFired = true;
+    showTwist(done);
+  } else if (done){
+    boardCleared();
+  }
+}
+
+/* ---- modal rendering ---- */
+function renderQ(){
+  const m = $('#modal');
+  if (!Qs){ m.classList.remove('on'); m.innerHTML=''; return; }
+  const tn = i => esc(G.teams[i].name);
+  const live = Qs.phase==='live' || Qs.phase==='grace';
+  const showCorrect = ['recipient','noone','result'].includes(Qs.phase);
+  const cat = CATS[Qs.ci];
+  const attemptingIdx = Qs.current;
+
+  const choices = Qs.cell.choices.map((c,i)=>{
+    let cls = 'choice';
+    if (Qs.elim.includes(i)) cls += ' elim';
+    if (showCorrect && c.ok) cls += ' correct';
+    const dis = !live || Qs.elim.includes(i);
+    return `<button class="${cls}" data-act="pick" data-v="${i}" ${dis?'disabled':''}><b>${'ABCD'[i]}</b><span>${esc(c.text)}</span></button>`;
+  }).join('');
+
+  let actions = '';
+  if (Qs.phase === 'wrong'){
+    const miss = Qs.lastMiss;
+    actions = `<div class="actions">
+      <div class="msg">\u274C ${tn(miss.team)} ${miss.timeout?'ran out of time':'missed it'}.</div>
+      <div class="row">
+        <button class="gold" data-act="steal">Steal: ${tn(Qs.nextTeam)}</button>
+        <button class="ghost" data-act="stop">Stop \u2014 No One Got It</button>
+      </div></div>`;
+  } else if (Qs.phase === 'noone'){
+    actions = `<div class="actions">
+      <div class="msg">${esc(Qs.reason)} The correct answer is highlighted above. Points still go to a random team.</div>
+      <div class="row"><button class="gold" data-act="revealPts">Reveal Points</button></div></div>`;
+  } else if (Qs.phase === 'recipient'){
+    actions = `<div class="actions">
+      <div class="msg">\u2705 ${tn(Qs.solver)} got it! Which team receives the points?</div>
+      <div class="row">${G.teams.map((t,i)=>`<button class="gold" data-act="recip" data-v="${i}">${esc(t.name)}${i===Qs.solver?' (keep)':''}</button>`).join('')}</div></div>`;
+  } else if (Qs.phase === 'result'){
+    const a = Qs.award;
+    actions = `<div class="actions">
+      <div class="msg">${a.random ? 'Randomly awarded to' : 'Points go to'} ${tn(a.team)}</div>
+      <div class="reveal ${a.val>0?'pos':'neg'} title-font">${fmt(a.val)}</div>
+      <div class="row"><button class="gold" data-act="cont">Continue</button></div></div>`;
+  }
+
+  const whoLabel = Qs.phase==='read'
+    ? `Turn: ${tn(Qs.team)}`
+    : (Qs.isSteal ? `Stealing: ${tn(attemptingIdx)}` : `Turn: ${tn(attemptingIdx)}`);
+  const whoCls = Qs.isSteal && live ? 'who steal' : 'who';
+  const showWho = ['read','live','grace'].includes(Qs.phase);
+  const showTimer = ['read','live','grace'].includes(Qs.phase);
+
+  m.innerHTML = `<div class="card">
+    <div class="qhead"><span>${esc(cat.name)} \u00B7 Question ${Qs.si+1}</span>${showWho?`<span class="${whoCls}">${whoLabel}</span>`:''}</div>
+    ${Qs.cell.calc && !Qs.isSteal && ['read','live','grace'].includes(Qs.phase) && Qs.attempted.length===0 ? `<div class="calcnote">\uD83E\uDDEE Calculation question: ${CALC_SECS} seconds on the clock</div>`:''}
+    <div class="qtext">${esc(Qs.cell.q)}</div>
+    ${showTimer?`<div class="timerbox" id="timerbox"><div class="tl" id="tl"></div><div class="tnum title-font" id="tn"></div><div class="bar"><i id="tb"></i></div></div>`:''}
+    <div class="choices">${choices}</div>
+    ${actions}
+  </div>`;
+  m.classList.add('on');
+  updateTimer();
+}
+
+function updateTimer(){
+  if (!Qs) return;
+  const box = document.getElementById('timerbox'); if (!box) return;
+  const now = Date.now();
+  const tl = document.getElementById('tl'), tn = document.getElementById('tn'), tb = document.getElementById('tb');
+  if (Qs.phase === 'read'){
+    box.className = 'timerbox read';
+    tl.textContent = 'Read the question aloud\u2026';
+    tn.textContent = Math.max(0, Math.ceil((Qs.deadline-now)/1000));
+  } else if (Qs.phase === 'live'){
+    box.className = 'timerbox';
+    const rem = Math.max(0,(Qs.deadline-now)/1000);
+    tl.textContent = Qs.isSteal ? 'Steal attempt' : 'Time on the clock';
+    tn.textContent = Math.ceil(rem);
+    tb.style.width = (rem/Qs.total*100)+'%';
+  } else if (Qs.phase === 'grace'){
+    box.className = 'timerbox grace';
+    const rem = Math.max(0,(Qs.deadline-now)/1000);
+    tl.textContent = 'Time! Click their answer now';
+    tn.textContent = rem.toFixed(1);
+    tb.style.width = (rem/(GRACE_MS/1000)*100)+'%';
+  }
+}
+
+setInterval(()=>{
+  if (!Qs) return;
+  const now = Date.now();
+  if (Qs.phase==='read' && now >= Qs.deadline) startLive();
+  else if (Qs.phase==='live' && now >= Qs.deadline){ Qs.phase='grace'; Qs.deadline = now + GRACE_MS; renderQ(); }
+  else if (Qs.phase==='grace' && now >= Qs.deadline) timeoutMiss();
+  updateTimer();
+}, 100);
+
+/* ============================================================
+   TWIST, BOARD CLEARED, WINNER
+   ============================================================ */
+function showOverlay(html){ const o=$('#overlay'); o.innerHTML=html; o.classList.add('on'); o.scrollTop=0; }
+function hideOverlay(){ const o=$('#overlay'); o.classList.remove('on'); o.innerHTML=''; }
+
+function showTwist(done){
+  showOverlay(`<div class="big">
+    <h2 class="title-font">PLOT TWIST!</h2>
+    <p>The win condition has been locked in since the very first turn. Here it is:</p>
+    <div class="rule title-font" style="color:var(--gold)">${WIN_TEXT[G.win]}</div>
+    <p>${WIN_FLAVOR[G.win]}</p>
+    <button class="gold big" data-act="dismissTwist" data-v="${done?1:0}">Let's go</button>
+  </div>`);
+}
+
+function boardCleared(){
+  showOverlay(`<div class="big"><h2 class="title-font">BOARD CLEARED!</h2><p>Tallying the scores\u2026</p></div>`);
+  setTimeout(()=>{ if (G && !G.over) showWinner(false); }, 2600);
+}
+
+function showWinner(early){
+  if (!G || G.over) return;
+  G.over = true;
+  const metric = s => G.win==='highest' ? s : G.win==='lowest' ? -s : -Math.abs(s);
+  const ranked = G.teams.map((t,i)=>({ ...t, i })).sort((a,b)=>metric(b.score)-metric(a.score));
+  const best = metric(ranked[0].score);
+  const winners = ranked.filter(t => metric(t.score)===best);
+  const unrevealed = !G.twistFired;
+  if (Qs){ Qs = null; renderQ(); }
+  renderGame();
+  showOverlay(`<div class="big">
+    <h2 class="title-font">${winners.length>1?'IT\'S A TIE!':'WINNER!'}</h2>
+    <div class="rule title-font">\uD83C\uDFC6 ${winners.map(w=>esc(w.name)).join(' &amp; ')}</div>
+    <p>Win condition: <b style="color:var(--gold)">${WIN_TEXT[G.win]}</b></p>
+    ${unrevealed?`<p class="note">This rule never got revealed in time. The game ended before the twist!</p>`:''}
+    <div class="standings">${ranked.map(t=>`<div class="${metric(t.score)===best?'w':''}"><span>${esc(t.name)}</span><span>${t.score}</span></div>`).join('')}</div>
+    <button class="gold big" data-act="newGame">New Game</button>
+  </div>`);
+}
+
+/* ============================================================
+   EVENTS (delegated)
+   ============================================================ */
+const actions = {
+  count(v){ teamCount = +v; renderSetup(); },
+  start(){ startGame(); },
+  slot(v){ const [ci,si] = v.split(',').map(Number); openQ(ci,si); },
+  pick(v){ pick(+v); },
+  steal(){ startSteal(); },
+  stop(){ stopNoOne(); },
+  recip(v){ if (Qs && Qs.phase==='recipient') award(+v, false); },
+  revealPts(){ if (Qs && Qs.phase==='noone') award(rnd(0, G.teams.length-1), true); },
+  cont(){ if (Qs && Qs.phase==='result') finalizeQ(); },
+  dismissTwist(v){ hideOverlay(); renderGame(); if (+v) boardCleared(); },
+  endEarly(){
+    const btn = document.getElementById('endbtn');
+    const now = Date.now();
+    if (now - endConfirmAt < 3000){ endConfirmAt = 0; showWinner(true); return; }
+    endConfirmAt = now;
+    if (btn){ btn.textContent = 'Sure? Click again to end the game'; }
+    setTimeout(()=>{ const b=document.getElementById('endbtn'); if (b && Date.now()-endConfirmAt>=2900) b.innerHTML='End Game Early &amp; Reveal Winner'; }, 3000);
+  },
+  newGame(){ hideOverlay(); renderSetup(); }
+};
+
+document.addEventListener('click', e=>{
+  const el = e.target.closest('[data-act]');
+  if (!el || el.disabled) return;
+  const fn = actions[el.dataset.act];
+  if (fn) fn(el.dataset.v);
+});
+document.addEventListener('input', e=>{
+  const t = e.target;
+  if (t.dataset.i !== undefined) names[+t.dataset.i] = t.value;
+  if (t.dataset.ti !== undefined && G){
+    const i = +t.dataset.ti;
+    G.teams[i].name = t.value;
+    names[i] = t.value;
+  }
+});
+
+renderSetup();
+</script>
+</body>
+</html>
